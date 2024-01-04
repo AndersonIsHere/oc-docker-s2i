@@ -19,8 +19,9 @@ LABEL io.openshift.tags="base rhel9"
 ENV container oci
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-CMD ["/bin/bash"]
+#CMD ["/bin/bash"]
 
 RUN rm -rf /var/log/*
 #rhbz 1609043
 RUN mkdir -p /var/log/rhsm
+CMD ["/bin/bash", "-c", "sleep infinity"]
