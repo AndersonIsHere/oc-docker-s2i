@@ -1,6 +1,57 @@
 # simple dockerfile to test OCP s2i using Dockerfile 
+#FROM registry.access.redhat.com/ubi7:latest
 
-FROM registry.access.redhat.com/ubi8:latest
+# This image is the base image for all OpenShift v3 language container images.
+FROM ubi9/s2i-core:rhel9.3.0
 
-# CMD ["/bin/bash", "-c", "sleep infinity"]
-CMD ["/bin/bash", "-c", "--", "while true; do sleep 30; done;"]
+ENV SUMMARY="Base image with essential libraries and tools used as a base for \
+builder images like perl, python, ruby, etc." \
+    DESCRIPTION="The s2i-base image, being built upon s2i-core, provides any \
+images layered on top of it with all the tools needed to use source-to-image \
+functionality. Additionally, s2i-base also contains various libraries needed for \
+it to serve as a base for other builder images, like s2i-python or s2i-ruby." \
+    NODEJS_VER=20
+
+LABEL summary="$SUMMARY" \
+      description="$DESCRIPTION" \
+      io.k8s.description="$DESCRIPTION" \
+      io.k8s.display-name="s2i base" \
+      com.redhat.component="s2i-base-container" \
+      name="ubi9/s2i-base" \
+      version="1" \
+      com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI"
+
+# This is the list of basic dependencies that all language container image can
+# consume.
+RUN yum -y module enable nodejs:$NODEJS_VER && \
+  INSTALL_PKGS="autoconf \
+  automake \
+  bzip2 \
+  gcc-c++ \
+  gd-devel \
+  gdb \
+  git \
+  libcurl-devel \
+  libpq-devel \
+  libxml2-devel \
+  libxslt-devel \
+  lsof \
+  make \
+  mariadb-connector-c-devel \
+  openssl-devel \
+  patch \
+  procps-ng \
+  npm \
+  redhat-rpm-config \
+  sqlite-devel \
+  unzip \
+  wget \
+  which \
+  zlib-devel" && \
+  yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+  rpm -V $INSTALL_PKGS && \
+  node -v | grep -qe "^v$NODEJS_VER\." && echo "Found VERSION $NODEJS_VER" && \
+  yum -y clean all --enablerepo='*'
+  
+CMD ["/bin/bash", "-c", "sleep infinity"]
+#CMD ["/bin/bash", "-c", "--", "while true; do sleep 30; done;"]
