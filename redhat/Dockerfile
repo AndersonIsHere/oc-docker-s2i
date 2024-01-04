@@ -1,4 +1,4 @@
-FROM ubi9/s2i-core:rhel9.3.0
+FROM registry.access.redhat.com/ubi9/httpd-24:1-297
 
 # Apache HTTP Server image.
 #
