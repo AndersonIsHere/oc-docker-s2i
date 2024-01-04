@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:9.3-1476
+FROM registry.access.redhat.com/ubi9/ubi
 
 LABEL maintainer="Red Hat, Inc."
 
