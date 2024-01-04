@@ -1,63 +1,67 @@
-FROM ubi9/s2i-base:rhel9.3.0
+FROM ubi9/s2i-core:rhel9.3.0
 
-# This image provides a Perl 5.32 environment you can use to run your Perl applications.
+# Apache HTTP Server image.
+#
+# Volumes:
+#  * /var/www - Datastore for httpd
+#  * /var/log/httpd24 - Storage for logs when $HTTPD_LOG_TO_VOLUME is set
+# Environment:
+#  * $HTTPD_LOG_TO_VOLUME (optional) - When set, httpd will log into /var/log/httpd24
 
-EXPOSE 8080
+ENV HTTPD_VERSION=2.4
 
-# Image metadata
-ENV PERL_VERSION=5.32 \
-    PERL_SHORT_VER=532 \
-    NAME=perl
-
-ENV SUMMARY="Platform for building and running Perl $PERL_VERSION applications" \
-    DESCRIPTION="Perl $PERL_VERSION available as container is a base platform for \
-building and running various Perl $PERL_VERSION applications and frameworks. \
-Perl is a high-level programming language with roots in C, sed, awk and shell scripting. \
-Perl is good at handling processes and files, and is especially good at handling text. \
-Perl's hallmarks are practicality and efficiency. While it is used to do a lot of \
-different things, Perl's most common applications are system administration utilities \
-and web programming."
+ENV SUMMARY="Platform for running Apache httpd $HTTPD_VERSION or building httpd-based application" \
+    DESCRIPTION="Apache httpd $HTTPD_VERSION available as container, is a powerful, efficient, \
+and extensible web server. Apache supports a variety of features, many implemented as compiled modules \
+which extend the core functionality. \
+These can range from server-side programming language support to authentication schemes. \
+Virtual hosting allows one Apache installation to serve many different Web sites."
 
 LABEL summary="$SUMMARY" \
       description="$DESCRIPTION" \
       io.k8s.description="$DESCRIPTION" \
-      io.k8s.display-name="Apache 2.4 with mod_fcgid and Perl $PERL_VERSION" \
-      io.openshift.expose-services="8080:http" \
-      io.openshift.tags="builder,${NAME},${NAME}${PERL_SHORT_VER}","${NAME}-${PERL_SHORT_VER}" \
-      io.openshift.s2i.scripts-url="image:///usr/libexec/s2i" \
-      io.s2i.scripts-url="image:///usr/libexec/s2i" \
-      name="ubi9/${NAME}-${PERL_SHORT_VER}" \
-      com.redhat.component="${NAME}-${PERL_SHORT_VER}-container" \
+      io.k8s.display-name="Apache httpd $HTTPD_VERSION" \
+      io.openshift.expose-services="8080:http,8443:https" \
+      io.openshift.tags="builder,httpd,httpd-24" \
+      name="rhel9/httpd-24" \
       version="1" \
       com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI" \
-      maintainer="SoftwareCollections.org <sclorg@redhat.com>" \
-      help="For more information visit https://github.com/sclorg/s2i-${NAME}-container" \
-      usage="s2i build <SOURCE-REPOSITORY> ubi9/${NAME}-${PERL_SHORT_VER}:latest <APP-NAME>"
+      com.redhat.component="httpd-24-container" \
+      usage="s2i build https://github.com/sclorg/httpd-container.git --context-dir=examples/sample-test-app/ rhel9/httpd-24 sample-server" \
+      maintainer="SoftwareCollections.org <sclorg@redhat.com>"
 
-# Deselect a default stream
-RUN INSTALL_PKGS="perl perl-devel mod_fcgid perl-App-cpanminus perl-FCGI patch" && \
-    yum -y --allowerasing distrosync && \
-    yum install -y --setopt=tsflags=nodocs  $INSTALL_PKGS && \
+EXPOSE 8080
+EXPOSE 8443
+
+RUN INSTALL_PKGS="gettext hostname nss_wrapper bind-utils httpd mod_ssl mod_ldap mod_session mod_security mod_auth_mellon sscg" && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
-    perl -v | grep -qe "v$PERL_VERSION\." && echo "Found VERSION $PERL_VERSION" && \
+    httpd -v | grep -qe "Apache/$HTTPD_VERSION" && echo "Found VERSION $HTTPD_VERSION" && \
     yum -y clean all --enablerepo='*'
 
-# Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
-COPY ./s2i/bin/ $STI_SCRIPTS_PATH
+ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
+    HTTPD_APP_ROOT=${APP_ROOT} \
+    HTTPD_CONFIGURATION_PATH=${APP_ROOT}/etc/httpd.d \
+    HTTPD_MAIN_CONF_PATH=/etc/httpd/conf \
+    HTTPD_MAIN_CONF_MODULES_D_PATH=/etc/httpd/conf.modules.d \
+    HTTPD_MAIN_CONF_D_PATH=/etc/httpd/conf.d \
+    HTTPD_TLS_CERT_PATH=/etc/httpd/tls \
+    HTTPD_VAR_RUN=/var/run/httpd \
+    HTTPD_DATA_PATH=/var/www \
+    HTTPD_DATA_ORIG_PATH=/var/www \
+    HTTPD_LOG_PATH=/var/log/httpd
 
-# Copy extra files to the image.
-COPY ./root/ /
+COPY 2.4/s2i/bin/ $STI_SCRIPTS_PATH
+COPY 2.4/root /
 
-# In order to drop the root user, we have to make some directories world
-# writeable as OpenShift default security model is to run the container under
-# random UID.
-RUN mkdir -p ${APP_ROOT}/etc/httpd.d && \
-    sed -i -f ${APP_ROOT}/etc/httpdconf.sed /etc/httpd/conf/httpd.conf && \
-    chmod -R og+rwx /var/run/httpd /run/mod_fcgid ${APP_ROOT}/etc/httpd.d && \
-    chown -R 1001:0 ${APP_ROOT} && chmod -R ug+rwx ${APP_ROOT} && \
-    rpm-file-permissions
+# Reset permissions of filesystem to default values
+RUN /usr/libexec/httpd-prepare && rpm-file-permissions
 
 USER 1001
 
-# Set the default CMD to print the usage of the language image
-CMD $STI_SCRIPTS_PATH/usage
+# Not using VOLUME statement since it's not working in OpenShift Online:
+# https://github.com/sclorg/httpd-container/issues/30
+# VOLUME ["${HTTPD_DATA_PATH}"]
+# VOLUME ["${HTTPD_LOG_PATH}"]
+
+CMD ["/usr/bin/run-httpd"]
