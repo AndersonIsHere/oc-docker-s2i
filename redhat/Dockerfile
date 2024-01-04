@@ -1,32 +1,58 @@
 # simple dockerfile to test OCP s2i using Dockerfile 
 #FROM registry.access.redhat.com/ubi7:latest
 
-FROM koji/image-build
+# This image is the base image for all OpenShift v3 language container images.
+FROM ubi9/s2i-core:rhel9.3.0
 
-LABEL maintainer="Red Hat, Inc."
+ENV SUMMARY="Base image with essential libraries and tools used as a base for \
+builder images like perl, python, ruby, etc." \
+    DESCRIPTION="The s2i-base image, being built upon s2i-core, provides any \
+images layered on top of it with all the tools needed to use source-to-image \
+functionality. Additionally, s2i-base also contains various libraries needed for \
+it to serve as a base for other builder images, like s2i-python or s2i-ruby." \
+    NODEJS_VER=20
 
-LABEL com.redhat.component="ubi9-container" \
-      name="ubi9" \
-      version="9.3"
+LABEL summary="$SUMMARY" \
+      description="$DESCRIPTION" \
+      io.k8s.description="$DESCRIPTION" \
+      io.k8s.display-name="s2i base" \
+      com.redhat.component="s2i-base-container" \
+      name="ubi9/s2i-base" \
+      version="1" \
+      com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI"
 
-#label for EULA
-LABEL com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI"
+# This is the list of basic dependencies that all language container image can
+# consume.
+RUN yum -y module enable nodejs:$NODEJS_VER && \
+  INSTALL_PKGS="autoconf \
+  automake \
+  bzip2 \
+  gcc-c++ \
+  gd-devel \
+  gdb \
+  git \
+  libcurl-devel \
+  libpq-devel \
+  libxml2-devel \
+  libxslt-devel \
+  lsof \
+  make \
+  mariadb-connector-c-devel \
+  openssl-devel \
+  patch \
+  procps-ng \
+  npm \
+  redhat-rpm-config \
+  sqlite-devel \
+  unzip \
+  wget \
+  which \
+  zlib-devel" && \
+  yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+  rpm -V $INSTALL_PKGS && \
+  node -v | grep -qe "^v$NODEJS_VER\." && echo "Found VERSION $NODEJS_VER" && \
+  yum -y clean all --enablerepo='*'
 
-#labels for container catalog
-LABEL summary="Provides the latest release of Red Hat Universal Base Image 9."
-LABEL description="The Universal Base Image is designed and engineered to be the base layer for all of your containerized applications, middleware and utilities. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly."
-LABEL io.k8s.display-name="Red Hat Universal Base Image 9"
-LABEL io.openshift.expose-services=""
-LABEL io.openshift.tags="base rhel9"
-
-ENV container oci
-ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-CMD ["/bin/bash"]
-
-RUN rm -rf /var/log/*
-#rhbz 1609043
-RUN mkdir -p /var/log/rhsm
 
 CMD ["/bin/bash", "-c", "sleep infinity"]
 #CMD ["/bin/bash", "-c", "--", "while true; do sleep 30; done;"]
