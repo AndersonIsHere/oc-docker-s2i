@@ -1,7 +1,4 @@
-# simple dockerfile to test OCP s2i using Dockerfile 
-#FROM registry.access.redhat.com/ubi7:latest
-
-FROM registry.redhat.io/ubi9/ubi:latest
+FROM koji/image-build
 
 LABEL maintainer="Red Hat, Inc."
 
@@ -27,6 +24,3 @@ CMD ["/bin/bash"]
 RUN rm -rf /var/log/*
 #rhbz 1609043
 RUN mkdir -p /var/log/rhsm
-
-CMD ["/bin/bash", "-c", "sleep infinity"]
-#CMD ["/bin/bash", "-c", "--", "while true; do sleep 30; done;"]
