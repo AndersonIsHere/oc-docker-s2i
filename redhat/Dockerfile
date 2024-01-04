@@ -1,5 +1,5 @@
 FROM registry.redhat.io/rhel8/httpd-24
-RUN root
+USER root
 # Apache HTTP Server image.
 #
 # Volumes:
