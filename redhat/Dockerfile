@@ -33,7 +33,7 @@ LABEL summary="$SUMMARY" \
 EXPOSE 8080
 EXPOSE 8443
 
-RUN yum -y module enable httpd:$HTTPD_VERSION && \
+RUN sudo yum -y module enable httpd:$HTTPD_VERSION && \
     INSTALL_PKGS="gettext hostname nss_wrapper bind-utils httpd mod_ssl mod_ldap mod_session mod_security mod_auth_mellon sscg" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
@@ -56,7 +56,7 @@ COPY 2.4/s2i/bin/ $STI_SCRIPTS_PATH
 COPY 2.4/root /
 
 # Reset permissions of filesystem to default values
-RUN /usr/libexec/httpd-prepare && rpm-file-permissions
+RUN sudo /usr/libexec/httpd-prepare && rpm-file-permissions
 
 USER 1001
 
