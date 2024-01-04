@@ -1,7 +1,6 @@
-FROM ubuntu
-USER root
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install apache2 -y && apt-get install apache2-utils -y && apt-get clean
-RUN chmod 777 /var/run /var/lock
-EXPOSE 80
-CMD ["apache2ctl","-D","FOREGROUND"]
+# simple dockerfile to test OCP s2i using Dockerfile 
+
+FROM registry.access.redhat.com/ubi7:latest
+
+CMD ["/bin/bash", "-c", "sleep infinity"]
+# CMD ["/bin/bash", "-c", "--", "while true; do sleep 30; done;"]
