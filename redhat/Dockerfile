@@ -1,7 +1,7 @@
 # simple dockerfile to test OCP s2i using Dockerfile 
 #FROM registry.access.redhat.com/ubi7:latest
 
-FROM koji/image-build
+FROM registry.redhat.io/ubi9/ubi:latest
 
 LABEL maintainer="Red Hat, Inc."
 
